@@ -1,10 +1,12 @@
 #include <cassert>
 #include <cstdlib>
+#include <ctime>
 #include <iostream>
 #include <functional>
 #include <limits>
 #include <queue>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -14,18 +16,35 @@ class Edge {
         int weigth;
 
         Edge( int _dstId, int _weigth ) : weigth( _weigth ), dstId( _dstId ) {}
+
+        bool operator==( const Edge & obj ) const {
+            if( obj.dstId == this->dstId ) {
+                return true;
+            }
+            return false;
+        }
 };
+
+namespace std {
+    template<>
+    struct hash< Edge > {
+        size_t
+        operator()( const Edge & obj ) const {
+            return std::hash<int>()( obj.dstId );
+        }
+    };
+}
 
 class Vertex {
     public:
         int id;
-        std::vector< Edge > edges;
+        std::unordered_set< Edge > edges;
 
         Vertex() {}
         Vertex( int _id ) : id( _id )  {}
 
         void addDirectedEdge( Edge && edge ) {
-            edges.push_back( edge );
+            edges.insert( edge );
         }
 
         void printVertex() const {
@@ -57,12 +76,12 @@ class Graph {
             v2.addDirectedEdge( Edge( id1, weigth ) );
         }
 
-        std::vector< int >
+        std::pair< std::vector< int >, std::vector< int > >
         shortestPath( int fromId, int toId ) const {
-            std::vector< int > path;
             if( graph.find( fromId ) == graph.end() ||
                 graph.find( toId ) == graph.end() ) {
-                return path;
+                return std::make_pair( std::vector< int >(),
+                                       std::vector< int >() );
             }
 
             // Creates the distance and path maps.
@@ -113,23 +132,33 @@ class Graph {
                 }
             }
 
+            std::vector< int > path;
+            std::vector< int > dist;
             int currentId = toId;
             int originId = toId;
             do {
                 currentId = originId;
                 path.push_back( currentId );
+                dist.push_back( distanceMap[ currentId ] );
 
                 originId = pathMap[ currentId ];
             } while( originId != currentId );
 
-            return path;
+            return std::make_pair( path, dist );
         }
 
-        void printPath( const std::vector< int > & path ) const {
+        void printPath( const std::pair< std::vector< int >,
+                                         std::vector< int > > & pathPair ) const {
+            const std::vector< int > & path = pathPair.first;
+            const std::vector< int > & dist = pathPair.second;
+
+            assert( path.size() == dist.size() );
+            int size = path.size();
+
             std::cout << "Shortest path: head";
-            for( auto && it = path.crbegin();
-                 it != path.crend(); ++it ) {
-                 std::cout << " -> " << *it;
+            for( int i = size - 1; i >= 0; --i ) {
+                 std::cout << " -> " << "[id("<< path[ i ] << "), dist("
+                           << dist[ i ] << ")]";
             }
             std::cout << std::endl;
         }
@@ -144,23 +173,39 @@ class Graph {
 
 int main() {
     // Set a predefined seed, so we can predict what happens.
-    std::srand( 0 );
-    const int maxWeigth = 10;
+    std::srand( std::time( nullptr ) );
+    const int maxWeigth = 50;
 
     Graph graph;
-
-    graph.addUndirectedEdge( 0, 1, std::rand() % maxWeigth );
     graph.addUndirectedEdge( 0, 2, std::rand() % maxWeigth );
     graph.addUndirectedEdge( 1, 3, std::rand() % maxWeigth );
     graph.addUndirectedEdge( 2, 4, std::rand() % maxWeigth );
     graph.addUndirectedEdge( 3, 4, std::rand() % maxWeigth );
     graph.addUndirectedEdge( 3, 5, std::rand() % maxWeigth );
     graph.addUndirectedEdge( 4, 5, std::rand() % maxWeigth );
-
     graph.printGraph();
-
     graph.printPath( graph.shortestPath( 0, 5 ) );
     graph.printPath( graph.shortestPath( 1, 5 ) );
     graph.printPath( graph.shortestPath( 3, 5 ) );
     graph.printPath( graph.shortestPath( 5, 2 ) );
+
+    std::cout << std::endl << std::endl;
+
+    // Random graph =)
+    int maxVertexes = 15;
+    int minVertexes = 5;
+    int numVertexes = ( std::rand() % ( maxVertexes - minVertexes ) ) + minVertexes;
+    int maxEdgesPerVertex = numVertexes / 3;
+    for( int i = 0; i < numVertexes; ++i ) {
+        int v1 = i;
+        int v2 = v1;
+        while ( v1 == v2 ) {
+            v2 = std::rand() % numVertexes;
+        }
+        graph.addUndirectedEdge( v1, v2, std::rand() % maxWeigth );
+    }
+    graph.printGraph();
+    for( int i = 0; i < numVertexes; ++i ) {
+        graph.printPath( graph.shortestPath( i, std::rand() % numVertexes ) );
+    }
 }
