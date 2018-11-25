@@ -10,6 +10,9 @@
 #include <utility>
 #include <vector>
 
+// Dijkstra's algorithm is an algorithm for finding the shortest paths between nodes
+// in a graph without negative edge weights.
+
 class Edge {
     public:
         int dstId;
@@ -105,9 +108,8 @@ class Graph {
             distanceMap[ fromId ] = 0;
             pathMap[ fromId ] = fromId;
 
-            // Stop when every single vertex has been processed.
-            // [TODO] Stop when we have found the shortest path from A to B.
-            while( !pq.empty() ) {
+            // Stop when we have found the shortest path from A to B.
+            while( !pq.empty() && pq.top().second != toId ) {
                 int currentId = pq.top().second;
                 pq.pop();
                 int currentDistance = distanceMap[ currentId ];
@@ -173,7 +175,7 @@ class Graph {
 
 int main() {
     // Set a predefined seed, so we can predict what happens.
-    std::srand( std::time( nullptr ) );
+    std::srand( 0 );
     const int maxWeigth = 50;
 
     Graph graph;
